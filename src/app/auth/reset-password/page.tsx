@@ -16,6 +16,10 @@ import { Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  PASSWORD_HINT,
+  validatePasswordPolicy,
+} from "@/lib/auth/password-policy";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -65,8 +69,9 @@ function ResetPasswordForm() {
     event.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    const policyError = validatePasswordPolicy(password);
+    if (policyError) {
+      setError(`${policyError}.`);
       return;
     }
     if (password !== confirmPassword) {
@@ -133,7 +138,7 @@ function ResetPasswordForm() {
             )}
           </button>
         </div>
-        <p className="text-muted-foreground text-xs">At least 6 characters.</p>
+        <p className="text-muted-foreground text-xs">{PASSWORD_HINT}</p>
       </div>
 
       <div className="space-y-2">

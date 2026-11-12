@@ -3,6 +3,7 @@
  * Comprehensive email service for tenant invitations, notifications, and password resets
  */
 
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import nodemailer from "nodemailer";
 import { IUser } from "@/types";
 import { formatCurrency } from "@/lib/utils/formatting";
@@ -370,7 +371,7 @@ If you have any questions, please contact our support team.
 
       <p>For security reasons, we recommend using a strong password that includes:</p>
       <ul>
-        <li>At least 8 characters</li>
+        <li>At least ${MIN_PASSWORD_LENGTH} characters (a short sentence you can remember works well)</li>
         <li>A mix of uppercase and lowercase letters</li>
         <li>Numbers and special characters</li>
       </ul>

@@ -15,6 +15,7 @@ import {
   parseRequestBody,
   withDatabase,
 } from "@/lib/api-utils";
+import { validatePasswordPolicy, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/utils";
 
 // ============================================================================
@@ -67,13 +68,10 @@ export const POST = withDatabase(async (request: NextRequest) => {
       return createErrorResponse("Invalid email format", 400);
     }
 
-    // Validate password length
-    if (password.length < 6) {
-      console.error("Password too short:", password.length);
-      return createErrorResponse(
-        "Password must be at least 6 characters long",
-        400
-      );
+    // Enforce the shared password policy (length only; see password-policy.ts)
+    const passwordError = validatePasswordPolicy(password);
+    if (passwordError) {
+      return createErrorResponse(passwordError, 400);
     }
 
     // A self-registration carries a plan id. Every plan is sold as a Manager
@@ -245,7 +243,7 @@ export const GET = async () => {
         firstName: "Required, max 50 characters",
         lastName: "Required, max 50 characters",
         email: "Required, valid email format",
-        password: "Required, minimum 6 characters",
+        password: `Required, minimum ${MIN_PASSWORD_LENGTH} characters`,
         phone: "Optional, valid phone number format",
         plan: `Optional, one of: ${MANAGER_PLANS.map((p) => p.id).join(", ")}. Decides the account type; the role is always set by the server.`,
       },

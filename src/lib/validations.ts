@@ -16,6 +16,12 @@ import {
   ComplianceStatus
 } from "@/types";
 import { isValidPhoneNumber } from "@/lib/utils";
+import {
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  PASSWORD_MIN_MESSAGE,
+  PASSWORD_MAX_MESSAGE,
+} from "@/lib/auth/password-policy";
 
 // ============================================================================
 // PHONE NUMBER VALIDATION
@@ -59,7 +65,10 @@ export const employmentInfoSchema = z.object({
 
 export const userSchema = z.object({
   email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z
+    .string()
+    .min(MIN_PASSWORD_LENGTH, PASSWORD_MIN_MESSAGE)
+    .max(MAX_PASSWORD_LENGTH, PASSWORD_MAX_MESSAGE),
   firstName: z
     .string()
     .min(1, "First name is required")

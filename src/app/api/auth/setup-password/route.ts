@@ -7,6 +7,12 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest } from "next/server";
 import connectDB from "@/lib/mongodb";
+import {
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  PASSWORD_MIN_MESSAGE,
+  PASSWORD_MAX_MESSAGE,
+} from "@/lib/auth/password-policy";
 import { User } from "@/models";
 import {
   createSuccessResponse,
@@ -28,8 +34,8 @@ const passwordSetupSchema = z
     token: z.string().min(1, "Token is required"),
     password: z
       .string()
-      .min(6, "Password must be at least 6 characters long")
-      .max(128, "Password cannot exceed 128 characters"),
+      .min(MIN_PASSWORD_LENGTH, PASSWORD_MIN_MESSAGE)
+      .max(MAX_PASSWORD_LENGTH, PASSWORD_MAX_MESSAGE),
     confirmPassword: z.string().min(1, "Password confirmation is required"),
   })
   .refine((data) => data.password === data.confirmPassword, {

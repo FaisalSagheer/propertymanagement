@@ -51,6 +51,7 @@ Other one-off scripts in `src/scripts/` and `scripts/` are run directly with `np
 ### Other
 - File uploads: `src/lib/file-upload.ts` writes to local `public/uploads` by default. Its `UPLOAD_STORAGE_PROVIDER=cloud` branch is a stub. Real cloud storage is Cloudflare R2 via `src/lib/r2.ts` / `src/lib/r2-server.ts`, used by the `/api/upload/*` routes. R2 hostnames are allowed in `next.config.ts` `images.remotePatterns`.
 - i18n: JSON message files per namespace in `src/locales/{en,de,es,fr}/`, aggregated by `src/locales/index.ts` and served through `localization.service.ts`, `LocalizationProvider` and the `use-localization` hook. When adding UI strings, add keys to all four locales.
-- Cron: `src/app/api/cron/check-leases` triggers lease expiration. Its `CRON_SECRET` check is currently commented out.
+- Cron: `src/app/api/cron/check-leases` triggers lease expiration and is guarded by `checkCronAuth` (`src/lib/auth/cron-auth.ts`): callers must send `Authorization: Bearer $CRON_SECRET`, and the route refuses to run if `CRON_SECRET` is unset.
+- Passwords: the length rule lives in `src/lib/auth/password-policy.ts` (shared by sign-up, reset, setup and the forms). `User.password` keeps its looser model-level `minlength` so seed scripts still work; enforce the policy at API boundaries.
 - Client state: Zustand stores in `src/stores/`; hooks in `src/hooks/`; UI primitives (shadcn) in `src/components/ui/`.
 - `next.config.ts` sets `typescript.ignoreBuildErrors: true` and proxies PostHog under `/ingest/*`.

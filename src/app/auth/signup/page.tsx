@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "@/lib/auth/password-policy";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -227,6 +228,7 @@ function SignUpForm() {
                     placeholder="Create a password"
                     className="pl-10 pr-10"
                     autoComplete="new-password"
+                    minLength={MIN_PASSWORD_LENGTH}
                     required
                   />
                   <button
@@ -244,6 +246,9 @@ function SignUpForm() {
                     )}
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {PASSWORD_HINT}
+                </p>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
