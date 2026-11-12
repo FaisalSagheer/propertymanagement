@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "npm run seed:build",
+    "postbuild": "npm run seed:demo",
     "start": "node server.js",
     "lint": "next lint",
     "seed:demo": "tsx src/scripts/seed-demo-accounts.ts",
