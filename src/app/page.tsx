@@ -9,6 +9,7 @@ import {
   CircleCheck,
   CreditCard,
   Star,
+  TrendingUp,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -186,14 +187,39 @@ export default async function LandingPage() {
             background: "linear-gradient(to bottom, #fff 40.1%, #188182 40.1%)",
           }}
         >
-          <Image
-            src="/images/dashboard-preview.webp"
-            alt={`${BRAND} dashboard showing portfolio metrics, revenue and payment status`}
-            width={1517}
-            height={835}
-            sizes="(min-width: 1600px) 1600px, 100vw"
-            className="mx-auto h-auto w-full max-w-[1600px]"
-          />
+          <div className="relative mx-auto max-w-[1600px] [container-type:inline-size]">
+            <Image
+              src="/images/dashboard-laptop.webp"
+              alt={`${BRAND} dashboard showing portfolio metrics, revenue and payment status`}
+              width={1517}
+              height={835}
+              sizes="(min-width: 1600px) 1600px, 100vw"
+              className="h-auto w-full"
+            />
+            {/* Floating stat card, sized in container units so it scales with the image. */}
+            <div
+              aria-hidden="true"
+              className="absolute left-[7%] top-[34.6%] hidden w-[15.2%] rounded-[0.7cqw] bg-white p-[1.3cqw] shadow-xl lg:block"
+            >
+              {[
+                { label: "Total Properties", value: "2", note: "All property listings", Icon: Building2 },
+                { label: "Total Rent Value", value: "N/A", note: "Combined monthly potential", Icon: TrendingUp },
+              ].map(({ label, value, note, Icon }, i) => (
+                <div key={label} className={i === 0 ? "pb-[1.2cqw]" : "pt-[0.4cqw]"}>
+                  <div className="flex items-center justify-between text-[0.8cqw] text-neutral-700">
+                    {label}
+                    <span className="flex size-[1.7cqw] items-center justify-center rounded-[0.4cqw] bg-sky-100 text-sky-600">
+                      <Icon className="size-[1cqw]" />
+                    </span>
+                  </div>
+                  <div className="mt-[0.5cqw] text-[1.3cqw] font-semibold leading-none text-neutral-900">
+                    {value}
+                  </div>
+                  <div className="mt-[0.4cqw] text-[0.6cqw] text-neutral-400">{note}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
         <div className="bg-[#188182] text-white">
           <div className="mx-auto grid max-w-6xl gap-6 px-6 pb-16 pt-4 md:grid-cols-2 md:items-center">
