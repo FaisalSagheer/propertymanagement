@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 import {
   BarChart3,
   Building2,
-  Check,
+  CircleCheck,
   CreditCard,
+  Star,
   Wrench,
   type LucideIcon,
 } from "lucide-react";
@@ -68,48 +69,7 @@ const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
 ];
 
 /** Add real customer quotes here to show the "What Our Clients Say" section. */
-const TESTIMONIALS: { quote: string; name: string }[] = [];
-
-function DashboardPreview() {
-  const tiles = ["Properties", "Occupancy", "Revenue", "Overdue", "Maintenance", "Leases"];
-  return (
-    <div className="mx-auto w-full max-w-3xl rounded-t-xl border-[10px] border-b-0 border-neutral-900 bg-white shadow-2xl">
-      <div className="flex">
-        <div className="hidden w-32 shrink-0 space-y-2 border-r bg-neutral-50 p-3 sm:block">
-          <div className="h-3 w-16 rounded bg-primary/70" />
-          {Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="h-2 rounded bg-neutral-200" />
-          ))}
-        </div>
-        <div className="flex-1 p-4">
-          <div className="mb-3 h-3 w-40 rounded bg-neutral-300" />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {tiles.map((t) => (
-              <div key={t} className="rounded-md border p-2">
-                <div className="text-[10px] text-neutral-500">{t}</div>
-                <div className="mt-1 h-3 w-10 rounded bg-neutral-800/80" />
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 flex h-24 items-end gap-1.5 rounded-md border p-2">
-            {[40, 65, 50, 80, 60, 90, 72, 95, 68, 85].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t bg-primary/70"
-                style={{ height: `${h}%` }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function priceLabel(monthlyPrice: number | null) {
-  if (monthlyPrice === null) return "POA";
-  return `£${monthlyPrice}`;
-}
+const TESTIMONIALS: { quote: string; name: string; rating?: number }[] = [];
 
 export default async function LandingPage() {
   const jar = await cookies();
@@ -218,13 +178,25 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Dashboard preview */}
-      <section className="bg-white pt-20">
-        <div className="px-6">
-          <DashboardPreview />
+      {/* Dashboard preview: the image's own background is white above and
+          #188182 below, so the wrapper continues both colours edge to edge. */}
+      <section>
+        <div
+          style={{
+            background: "linear-gradient(to bottom, #fff 40.1%, #188182 40.1%)",
+          }}
+        >
+          <Image
+            src="/images/dashboard-preview.webp"
+            alt={`${BRAND} dashboard showing portfolio metrics, revenue and payment status`}
+            width={1517}
+            height={835}
+            sizes="(min-width: 1600px) 1600px, 100vw"
+            className="mx-auto h-auto w-full max-w-[1600px]"
+          />
         </div>
-        <div className="bg-primary text-primary-foreground">
-          <div className="mx-auto grid max-w-6xl gap-6 px-6 py-14 md:grid-cols-2 md:items-center">
+        <div className="bg-[#188182] text-white">
+          <div className="mx-auto grid max-w-6xl gap-6 px-6 pb-16 pt-4 md:grid-cols-2 md:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest opacity-80">
                 Get free trial
@@ -244,23 +216,37 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials (hidden until real quotes are added) */}
+      {/* Testimonials (hidden until real quotes are added to TESTIMONIALS) */}
       {TESTIMONIALS.length > 0 && (
-        <section className="bg-neutral-900 py-20 text-white">
+        <section className="bg-[#1f1f1f] py-20 text-white">
           <div className="mx-auto max-w-6xl px-6">
-            <h2 className="text-3xl font-semibold tracking-tight">
-              What Our Clients <span className="text-primary">Say</span>
+            <h2 className="text-4xl font-semibold tracking-tight">
+              What Our Clients <span className="text-[#188182]">Say</span>
             </h2>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
-              {TESTIMONIALS.map((t) => (
+              {TESTIMONIALS.map((t, i) => (
                 <figure
                   key={t.name}
-                  className="rounded-lg border border-white/10 bg-white/[0.03] p-6"
+                  className={`flex flex-col border bg-white/[0.03] p-7 ${
+                    i === 0 ? "border-[#188182]/60" : "border-white/5"
+                  }`}
                 >
-                  <blockquote className="text-sm leading-relaxed text-neutral-300">
+                  <div
+                    className="flex gap-1 text-amber-400"
+                    role="img"
+                    aria-label={`${t.rating ?? 5} out of 5 stars`}
+                  >
+                    {Array.from({ length: t.rating ?? 5 }).map((_, n) => (
+                      <Star key={n} className="size-4 fill-current" aria-hidden="true" />
+                    ))}
+                  </div>
+                  <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-neutral-300">
                     {t.quote}
                   </blockquote>
-                  <figcaption className="mt-4 text-sm font-medium">
+                  <figcaption className="mt-8 flex items-center gap-3 border-t border-white/5 pt-5 text-sm font-medium">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-white/10 text-xs">
+                      {t.name[0]}
+                    </span>
                     {t.name}
                   </figcaption>
                 </figure>
@@ -271,39 +257,34 @@ export default async function LandingPage() {
       )}
 
       {/* Pricing */}
-      <section id="pricing" className="mx-auto max-w-4xl px-6 py-20">
-        <h2 className="text-center text-3xl font-semibold tracking-tight">
-          Our <span className="text-primary">Pricing</span>
+      <section id="pricing" className="bg-[#fafafa] px-6 py-20">
+        <h2 className="text-center text-4xl font-semibold tracking-tight">
+          Our <span className="text-[#188182]">Pricing</span>
         </h2>
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
+        <div className="mx-auto mt-14 grid max-w-4xl items-start gap-6 md:grid-cols-2">
           {MANAGER_PLANS.map((plan) => (
-            <div
-              key={plan.id}
-              className={`flex flex-col rounded-lg border bg-white ${
-                plan.popular ? "border-primary shadow-lg" : ""
-              }`}
-            >
+            <div key={plan.id} className="bg-white">
               {plan.popular && (
-                <div className="rounded-t-md bg-primary py-1.5 text-center text-xs font-semibold text-primary-foreground">
+                <div className="bg-[#188182] px-7 py-4 text-lg text-white">
                   Popular
                 </div>
               )}
-              <div className="flex flex-1 flex-col p-6">
-                <h3 className="font-semibold">{plan.name}</h3>
-                <p className="mt-3 text-3xl font-semibold">
-                  {priceLabel(plan.monthlyPrice)}
+              <div className="p-7">
+                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                <p className="mt-5 flex items-baseline gap-1">
+                  <span className="text-xl font-semibold">£</span>
+                  <span className="text-5xl font-semibold">
+                    {plan.monthlyPrice ?? "POA"}
+                  </span>
                   {plan.monthlyPrice ? (
-                    <span className="text-sm font-normal text-neutral-500">
-                      {" "}
-                      /month
-                    </span>
+                    <span className="ml-1 text-sm text-neutral-400">/month</span>
                   ) : null}
                 </p>
-                <ul className="mt-5 flex-1 space-y-2.5 text-sm text-neutral-700">
+                <ul className="mt-6 space-y-3 font-serif text-[15px] text-neutral-600">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <Check
-                        className="mt-0.5 size-4 shrink-0 text-primary"
+                    <li key={f} className="flex items-center gap-3">
+                      <CircleCheck
+                        className="size-4 shrink-0 text-[#188182]"
                         aria-hidden="true"
                       />
                       {f}
@@ -314,8 +295,8 @@ export default async function LandingPage() {
                   href={`/auth/signup?plan=${plan.id}`}
                   className={
                     plan.popular
-                      ? `${ctaClass} mt-6 w-full`
-                      : "mt-6 inline-flex h-10 w-full items-center justify-center rounded-md border border-primary text-sm font-medium text-primary hover:bg-primary/5"
+                      ? "mt-7 flex h-14 w-full items-center justify-center bg-[#188182] text-sm font-medium text-white hover:opacity-90"
+                      : "mt-7 flex h-14 w-full items-center justify-center border border-[#188182] text-sm font-medium text-[#188182] hover:bg-[#188182]/5"
                   }
                 >
                   {plan.popular ? "Get started" : "Start for free"}
@@ -324,7 +305,7 @@ export default async function LandingPage() {
             </div>
           ))}
         </div>
-        <p className="mt-6 text-center text-sm text-neutral-500">
+        <p className="mt-8 text-center text-sm text-neutral-500">
           <Link href="/pricing" className="underline underline-offset-4">
             Compare all plans
           </Link>
