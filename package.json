@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",
+    "postbuild": "npm run seed:build",
     "start": "node server.js",
     "lint": "next lint",
     "seed:demo": "tsx src/scripts/seed-demo-accounts.ts",
-    "seed:demo-data": "tsx src/scripts/seed-demo-data.ts"
+    "seed:demo-data": "tsx src/scripts/seed-demo-data.ts",
+    "seed:build": "tsx src/scripts/seed-on-build.ts"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
