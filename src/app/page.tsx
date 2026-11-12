@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -69,43 +70,6 @@ const FEATURES: { icon: LucideIcon; title: string; body: string }[] = [
 /** Add real customer quotes here to show the "What Our Clients Say" section. */
 const TESTIMONIALS: { quote: string; name: string }[] = [];
 
-function Skyline({ className }: { className?: string }) {
-  // Deterministic building heights, so server and client output always match.
-  const heights = [62, 88, 48, 96, 70, 110, 54, 84, 100, 66, 92, 58, 78, 104];
-  return (
-    <svg
-      viewBox="0 0 280 130"
-      preserveAspectRatio="xMidYMax slice"
-      className={className}
-      aria-hidden="true"
-    >
-      {heights.map((h, i) => (
-        <g key={i}>
-          <rect
-            x={i * 20}
-            y={130 - h}
-            width={17}
-            height={h}
-            className="fill-current"
-            opacity={0.55 + (i % 4) * 0.12}
-          />
-          {Array.from({ length: Math.floor(h / 14) }).map((_, r) => (
-            <rect
-              key={r}
-              x={i * 20 + 4}
-              y={130 - h + 6 + r * 14}
-              width={9}
-              height={5}
-              fill="white"
-              opacity={(i + r) % 3 === 0 ? 0.55 : 0.12}
-            />
-          ))}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 function DashboardPreview() {
   const tiles = ["Properties", "Occupancy", "Revenue", "Overdue", "Maintenance", "Leases"];
   return (
@@ -160,14 +124,25 @@ export default async function LandingPage() {
     <main className="bg-white text-neutral-900">
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
-        <Skyline className="absolute inset-x-0 bottom-0 -z-10 h-full w-full text-slate-500/60" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-slate-900/80 to-transparent" />
+        <Image
+          src="/images/herolanding.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="-z-20 object-cover"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/80" />
         <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
-            <span className="flex size-7 items-center justify-center rounded bg-primary text-sm">
-              {BRAND[0]}
-            </span>
-            {BRAND}
+          <Link href="/" aria-label={BRAND}>
+            <Image
+              src="/images/logo-light.png"
+              alt={BRAND}
+              width={228}
+              height={42}
+              priority
+              className="h-8 w-auto"
+            />
           </Link>
           <Link href="/auth/signin" className={ctaClass}>
             Log in
@@ -190,8 +165,14 @@ export default async function LandingPage() {
 
       {/* Product story */}
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 md:grid-cols-2">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-gradient-to-b from-slate-200 to-slate-400">
-          <Skyline className="absolute inset-0 h-full w-full text-slate-700" />
+        <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-300">
+          <Image
+            src="/images/herolanding.png"
+            alt="Residential apartment towers"
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover object-[28%_center]"
+          />
         </div>
         <div>
           <h2 className="text-3xl font-semibold tracking-tight">
@@ -353,11 +334,14 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer className="bg-neutral-900 text-neutral-300">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-3">
-          <div className="flex items-center gap-2 text-lg font-semibold text-white">
-            <span className="flex size-7 items-center justify-center rounded bg-primary text-sm">
-              {BRAND[0]}
-            </span>
-            {BRAND}
+          <div>
+            <Image
+              src="/images/logo-light.png"
+              alt={BRAND}
+              width={228}
+              height={42}
+              className="h-8 w-auto"
+            />
           </div>
           <p className="text-sm leading-relaxed">
             Bring your properties, tenants, payments and workflows together in
