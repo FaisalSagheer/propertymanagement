@@ -5,7 +5,7 @@
 
 import { NextRequest } from "next/server";
 import mongoose from "mongoose";
-import { User, ManagerAccount } from "@/models";
+import { User, ManagerAccount, Subscription } from "@/models";
 import { MANAGER_PLANS } from "@/lib/billing/plans";
 import { UserRole } from "@/types";
 import {
@@ -198,26 +198,53 @@ export const POST = withDatabase(async (request: NextRequest) => {
       // whole request here would leave an account they could not re-create
       // (the email is taken). Logged loudly instead, for an admin to reconcile.
       if (selectedPlan) {
+        // A paid plan is not active until money arrives; the free tier has
+        // nothing to collect, so it starts active.
+        // monthlyPrice is null on the per-client "custom" plan, which is
+        // treated as nothing-to-collect here rather than crashing.
+        const subscriptionStatus =
+          (selectedPlan.monthlyPrice ?? 0) > 0 ? "pending" : "active";
+        let managerAccountId: mongoose.Types.ObjectId | null = null;
+
         try {
-          await ManagerAccount.create({
+          const account = await ManagerAccount.create({
             clientName: `${firstName.trim()} ${lastName.trim()}`.trim(),
             contactEmail: email.toLowerCase().trim(),
             managerUserId: savedUser._id,
             planId: selectedPlan.id,
-            // A paid plan is not active until money arrives; the free tier has
-            // nothing to collect, so it starts active.
-            // monthlyPrice is null on the per-client "custom" plan, which is
-            // treated as nothing-to-collect here rather than crashing.
-            status: (selectedPlan.monthlyPrice ?? 0) > 0 ? "pending" : "active",
+            status: subscriptionStatus,
             amount: selectedPlan.monthlyPrice ?? 0,
             billingCycle: "monthly",
             startedAt: new Date(),
             renewsAt: null,
             paymentMethod: "card",
           });
+          managerAccountId = account._id as mongoose.Types.ObjectId;
         } catch (subscriptionError) {
           console.error(
             `Registered ${email} on plan "${selectedPlan.id}" but the subscription record failed:`,
+            subscriptionError
+          );
+        }
+
+        // The standalone Subscription record. Kept in its own try so that a
+        // failure here can never undo the ManagerAccount above, or the user.
+        try {
+          await Subscription.create({
+            userId: savedUser._id,
+            managerAccountId,
+            planId: selectedPlan.id,
+            status: subscriptionStatus,
+            billingCycle: "monthly",
+            amount: selectedPlan.monthlyPrice ?? 0,
+            currency: "GBP",
+            unitLimit: selectedPlan.unitLimit,
+            paymentMethod: "card",
+            startedAt: new Date(),
+          });
+        } catch (subscriptionError) {
+          console.error(
+            `Registered ${email} on plan "${selectedPlan.id}" but the Subscription document failed:`,
             subscriptionError
           );
         }
