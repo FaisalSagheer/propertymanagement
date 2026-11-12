@@ -35,10 +35,19 @@ export const POST = withDatabase(async (request: NextRequest) => {
       email,
       phone,
       password,
-      role = UserRole.TENANT,
-      avatar,
       plan,
     } = body;
+
+    // Self-registration NEVER lets the client choose its own privileges. `role`,
+    // `subscription`, `permissions`, `isActive` and the like are deliberately
+    // not read from the body: the role is decided below, server-side, from
+    // whether a valid plan was chosen. (Previously a client-supplied `role`
+    // was honoured, so `{"role":"admin"}` created an administrator.)
+    if (body.role !== undefined && body.role !== UserRole.TENANT) {
+      console.warn(
+        `[register] ignored client-supplied role "${String(body.role)}" for ${String(email)}`
+      );
+    }
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password) {
@@ -67,24 +76,6 @@ export const POST = withDatabase(async (request: NextRequest) => {
       );
     }
 
-    // Map role values to enum values for single company architecture
-    const roleMapping: Record<string, UserRole> = {
-      tenant: UserRole.TENANT,
-      admin: UserRole.ADMIN,
-      manager: UserRole.MANAGER,
-      // Legacy mappings for backward compatibility
-      super_admin: UserRole.ADMIN,
-      property_manager: UserRole.MANAGER,
-      owner: UserRole.MANAGER,
-      property_owner: UserRole.MANAGER,
-      "Property Owner": UserRole.MANAGER,
-      "Property Manager": UserRole.MANAGER,
-      maintenance_staff: UserRole.MANAGER,
-      "Maintenance Staff": UserRole.MANAGER,
-      leasing_agent: UserRole.MANAGER,
-      "Leasing Agent": UserRole.MANAGER,
-    };
-
     // A self-registration carries a plan id. Every plan is sold as a Manager
     // account, so the user's role is the built-in `manager`; WHICH plan they
     // are on is recorded separately in `subscription`. The id is checked
@@ -108,24 +99,9 @@ export const POST = withDatabase(async (request: NextRequest) => {
       entitledPlan = isPaid ? "free" : selectedPlan.id;
     }
 
-    const mappedRole = selectedPlan
-      ? UserRole.MANAGER
-      : (roleMapping[role] ?? role);
-
-    // Validate role. A plan sign-up is always a manager, so only a sign-up
-    // without a plan needs the enum check.
-    if (
-      !selectedPlan &&
-      !Object.values(UserRole).includes(mappedRole as UserRole)
-    ) {
-      console.error(
-        "Invalid role specified:",
-        role,
-        "Available roles:",
-        Object.values(UserRole)
-      );
-      return createErrorResponse(`Invalid role specified: ${role}`, 400);
-    }
+    // Server-decided role. A plan sign-up is a manager account; anything else
+    // is a plain tenant. Admins are never created through this endpoint.
+    const mappedRole = selectedPlan ? UserRole.MANAGER : UserRole.TENANT;
 
     // Validate phone number if provided
     if (phone) {
@@ -150,7 +126,7 @@ export const POST = withDatabase(async (request: NextRequest) => {
         password,
         role: mappedRole,
         subscription: entitledPlan,
-        avatar: avatar || null,
+        avatar: null,
         isActive: true,
         emailVerified: null, // Will be set when email is verified
       });
@@ -265,14 +241,13 @@ export const GET = async () => {
   return createSuccessResponse(
     {
       message: "Registration endpoint is available",
-      availableRoles: Object.values(UserRole),
       requirements: {
         firstName: "Required, max 50 characters",
         lastName: "Required, max 50 characters",
         email: "Required, valid email format",
         password: "Required, minimum 6 characters",
         phone: "Optional, valid phone number format",
-        role: `Optional, one of: ${Object.values(UserRole).join(", ")}`,
+        plan: `Optional, one of: ${MANAGER_PLANS.map((p) => p.id).join(", ")}. Decides the account type; the role is always set by the server.`,
       },
     },
     "Registration endpoint information"
