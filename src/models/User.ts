@@ -116,6 +116,16 @@ const UserSchema = new Schema<
       trim: true,
       lowercase: true,
     },
+    // The plan this user is entitled to right now (a MANAGER_PLANS id such as
+    // "free" or "pro"). Separate from `role`: every self-registered account is a
+    // `manager`; this says which plan that manager is on. null for users who
+    // did not sign up through a plan (admins, tenants).
+    subscription: {
+      type: String,
+      default: null,
+      trim: true,
+      lowercase: true,
+    },
     avatar: {
       type: String,
       default: null,

@@ -244,37 +244,45 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     );
   }
 
-  // Money has arrived, so the account may now hold its plan's role. Sign-up
-  // deliberately creates paid-plan users on `free` (see auth/register), which
-  // is what stops someone granting themselves Pro by filling in a form.
+  // Money has arrived, so the user may now be entitled to their plan. Sign-up
+  // deliberately creates paid-plan users on the `free` subscription (see
+  // auth/register), which is what stops someone granting themselves Pro by
+  // filling in a form. Their role stays `manager` throughout.
   //
   // Best-effort: a failure here must not make Stripe retry a payment we have
   // already recorded. The account is on the right plan either way, so this is
   // recoverable by re-running the promotion.
   if (account.managerUserId) {
     try {
-      const RoleModel = dbModel("Role");
-      const planRole = await RoleModel.findOne({
-        name: account.planId,
-        isActive: true,
-      });
-
-      if (planRole) {
-        await dbModel("User").updateOne(
-            { _id: account.managerUserId },
-            { $set: { role: account.planId } }
-          );
-      } else {
-        console.error(
-          `[billing] paid ${account.planId} but no active role of that name — user left on free`
-        );
-      }
+      await User.updateOne(
+        { _id: account.managerUserId },
+        { $set: { subscription: account.planId } }
+      );
     } catch (promotionError) {
       console.error(
-        `[billing] failed to promote user ${account.managerUserId} to ${account.planId}:`,
+        `[billing] failed to move user ${account.managerUserId} onto ${account.planId}:`,
         promotionError
       );
     }
+  }
+
+  // Keep the standalone Subscription record in step with the payment.
+  try {
+    await dbModel("Subscription").updateOne(
+      { managerAccountId: account._id, deletedAt: null },
+      {
+        $set: {
+          status: "active",
+          lastPaymentAt: new Date(),
+          stripeSubscriptionId: subscriptionId,
+        },
+      }
+    );
+  } catch (syncError) {
+    console.error(
+      `[billing] failed to update Subscription for account ${account._id}:`,
+      syncError
+    );
   }
 
   const receivedOn = new Date(

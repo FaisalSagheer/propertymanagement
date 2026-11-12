@@ -74,6 +74,8 @@ export interface IUser extends Document, IUserMethods {
   lastName: string;
   phone?: string;
   role: string;
+  /** Plan the user is currently entitled to (a MANAGER_PLANS id), if any. */
+  subscription?: string | null;
   avatar?: string;
   bio?: string;
   location?: string;

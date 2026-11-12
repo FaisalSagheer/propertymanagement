@@ -85,12 +85,13 @@ export const POST = withDatabase(async (request: NextRequest) => {
       "Leasing Agent": UserRole.MANAGER,
     };
 
-    // A self-registration carries a plan id, and the account's role IS that
-    // plan. The id is checked against MANAGER_PLANS rather than trusted: it
-    // arrives from the client, and without this check `plan: "admin"` would
-    // become the user's role.
-    let planRole: string | null = null;
+    // A self-registration carries a plan id. Every plan is sold as a Manager
+    // account, so the user's role is the built-in `manager`; WHICH plan they
+    // are on is recorded separately in `subscription`. The id is checked
+    // against MANAGER_PLANS rather than trusted: it arrives from the client,
+    // and without this check `plan: "admin"` would become the user's plan.
     let selectedPlan: (typeof MANAGER_PLANS)[number] | null = null;
+    let entitledPlan: string | null = null;
 
     if (plan) {
       selectedPlan = MANAGER_PLANS.find((p) => p.id === plan) ?? null;
@@ -98,57 +99,23 @@ export const POST = withDatabase(async (request: NextRequest) => {
         return createErrorResponse(`Unknown plan: ${plan}`, 400);
       }
 
-      // resolveUserRole() falls back to `tenant` for a role name it cannot
-      // find, so a missing Role document would silently hand a paying customer
-      // a tenant's permissions. Refuse rather than mis-authorise — run
-      // scripts/seed-plan-roles.js if this fires.
-      const RoleModel = mongoose.model("Role");
-      const roleDoc = await RoleModel.findOne({
-        name: selectedPlan.id,
-        isActive: true,
-      });
-
-      if (!roleDoc) {
-        console.error(`No role document for plan "${selectedPlan.id}"`);
-        return createErrorResponse(
-          "This plan is not available for sign-up yet",
-          503
-        );
-      }
-
-      // A PAID plan does not grant its role at sign-up. The account is created
-      // on `free` and the subscription on `pending`; the Stripe webhook
-      // promotes the role when an invoice is actually paid
-      // (handleInvoicePaid). Assigning `pro` here would hand out every Pro
-      // permission to anyone who typed an email address.
-      //
-      // The chosen plan is not lost — it is recorded on the ManagerAccount, so
-      // checkout and the webhook know what was asked for.
+      // A PAID plan is not granted at sign-up. The user starts on `free`, and
+      // the Subscription / ManagerAccount records hold the requested plan as
+      // `pending`; the Stripe webhook moves the user onto it when an invoice
+      // is actually paid (handleInvoicePaid). Granting `pro` here would give
+      // every Pro feature to anyone who typed an email address.
       const isPaid = (selectedPlan.monthlyPrice ?? 0) > 0;
-      planRole = isPaid ? "free" : selectedPlan.id;
-
-      if (isPaid) {
-        const freeRole = await RoleModel.findOne({
-          name: "free",
-          isActive: true,
-        });
-        if (!freeRole) {
-          console.error("No active `free` role to hold a pending paid sign-up");
-          return createErrorResponse(
-            "Sign-up is not available yet",
-            503
-          );
-        }
-      }
+      entitledPlan = isPaid ? "free" : selectedPlan.id;
     }
 
-    const mappedRole = planRole ?? roleMapping[role] ?? role;
+    const mappedRole = selectedPlan
+      ? UserRole.MANAGER
+      : (roleMapping[role] ?? role);
 
-    // Validate role. A plan role is already validated above — against the plan
-    // list and against an existing Role document — so it skips the enum check,
-    // which only knows the three built-ins.
+    // Validate role. A plan sign-up is always a manager, so only a sign-up
+    // without a plan needs the enum check.
     if (
-      !planRole &&
+      !selectedPlan &&
       !Object.values(UserRole).includes(mappedRole as UserRole)
     ) {
       console.error(
@@ -182,6 +149,7 @@ export const POST = withDatabase(async (request: NextRequest) => {
         phone: phone ? normalizePhoneNumber(phone.trim()) : undefined,
         password,
         role: mappedRole,
+        subscription: entitledPlan,
         avatar: avatar || null,
         isActive: true,
         emailVerified: null, // Will be set when email is verified
