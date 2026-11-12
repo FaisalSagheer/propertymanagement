@@ -125,7 +125,7 @@ export default async function LandingPage() {
       {/* Hero */}
       <section className="relative isolate overflow-hidden bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white">
         <Image
-          src="/images/herolanding.png"
+          src="/images/herolanding.webp"
           alt=""
           fill
           priority
@@ -167,7 +167,7 @@ export default async function LandingPage() {
       <section className="mx-auto grid max-w-6xl items-center gap-10 px-6 py-20 md:grid-cols-2">
         <div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-slate-300">
           <Image
-            src="/images/herolanding.png"
+            src="/images/herolanding.webp"
             alt="Residential apartment towers"
             fill
             sizes="(min-width: 768px) 50vw, 100vw"
@@ -330,40 +330,6 @@ export default async function LandingPage() {
           </Link>
         </p>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-neutral-900 text-neutral-300">
-        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 md:grid-cols-3">
-          <div>
-            <Image
-              src="/images/logo-light.png"
-              alt={BRAND}
-              width={228}
-              height={42}
-              className="h-8 w-auto"
-            />
-          </div>
-          <p className="text-sm leading-relaxed">
-            Bring your properties, tenants, payments and workflows together in
-            one powerful platform designed to simplify operations and keep you
-            in control.
-          </p>
-          <nav className="flex flex-col gap-2 text-sm md:items-end">
-            <Link href="/pricing" className="hover:text-white">
-              Pricing
-            </Link>
-            <Link href="/auth/signin" className="hover:text-white">
-              Log in
-            </Link>
-            <Link href="/auth/signup" className="hover:text-white">
-              Sign up
-            </Link>
-          </nav>
-        </div>
-        <div className="mx-auto max-w-6xl border-t border-white/10 px-6 py-5 text-xs text-neutral-500">
-          © {new Date().getFullYear()} {BRAND}. All rights reserved.
-        </div>
-      </footer>
     </main>
   );
 }
