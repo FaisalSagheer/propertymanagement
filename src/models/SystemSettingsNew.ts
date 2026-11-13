@@ -1,3 +1,4 @@
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 // System Settings Interface
@@ -186,7 +187,7 @@ const systemSettingsNewSchema = new Schema<ISystemSettingsNew>(
     // Security Configuration
     security: {
       requireEmailVerification: { type: Boolean, default: true },
-      passwordMinLength: { type: Number, default: 8, min: 6, max: 50 },
+      passwordMinLength: { type: Number, default: MIN_PASSWORD_LENGTH, min: 6, max: 50 },
       sessionTimeout: { type: Number, default: 60, min: 15, max: 1440 },
       maxLoginAttempts: { type: Number, default: 5, min: 3, max: 20 },
       enableTwoFactor: { type: Boolean, default: false },
@@ -359,7 +360,7 @@ systemSettingsNewSchema.statics.createDefaultSettings = function () {
     },
     security: {
       requireEmailVerification: true,
-      passwordMinLength: 8,
+      passwordMinLength: MIN_PASSWORD_LENGTH,
       sessionTimeout: 60,
       maxLoginAttempts: 5,
       enableTwoFactor: false,

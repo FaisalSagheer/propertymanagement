@@ -27,7 +27,7 @@ async function main() {
     const tenantCount = Number(process.env.DEMO_TENANT_COUNT || 15);
 
     const adminEmail = process.env.DEMO_ADMIN_EMAIL || "admin@demo.com";
-    const adminPassword = process.env.DEMO_ADMIN_PASSWORD || "Demo123!";
+    const adminPassword = process.env.DEMO_ADMIN_PASSWORD || "DemoAdmin1234!";
     const organizationName =
       process.env.DEMO_ORG_NAME || "Demo Property Management";
 

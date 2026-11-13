@@ -3,6 +3,7 @@
  * Advanced validation utilities for settings operations
  */
 
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { z } from "zod";
 import {
   profileSettingsSchema,
@@ -187,11 +188,11 @@ export class SettingsValidator {
     }
 
     // Check password requirements
-    if (data.passwordRequirements?.minLength < 8) {
+    if (data.passwordRequirements?.minLength < MIN_PASSWORD_LENGTH) {
       warnings.push({
         field: "passwordRequirements.minLength",
-        message: "Password minimum length is less than 8 characters",
-        suggestion: "Use at least 8 characters for stronger passwords",
+        message: `Password minimum length is less than ${MIN_PASSWORD_LENGTH} characters`,
+        suggestion: `Use at least ${MIN_PASSWORD_LENGTH} characters, which is what sign-up and reset enforce`,
       });
     }
 

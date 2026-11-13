@@ -215,7 +215,7 @@
   "admin.createUser.validation.lastNameRequired": "Last name is required",
   "admin.createUser.validation.lastNameTooLong": "Last name too long",
   "admin.createUser.validation.invalidEmail": "Invalid email address",
-  "admin.createUser.validation.passwordMinLength": "Password must be at least 8 characters",
+  "admin.createUser.validation.passwordMinLength": "Password must be at least 12 characters",
   "admin.createUser.validation.passwordComplexity": "Password must contain uppercase, lowercase, number, and special character",
   "admin.createUser.validation.confirmPasswordRequired": "Password confirmation is required",
   "admin.createUser.validation.passwordsDontMatch": "Passwords don't match",

@@ -215,7 +215,7 @@
   "admin.createUser.validation.lastNameRequired": "El apellido es obligatorio",
   "admin.createUser.validation.lastNameTooLong": "Apellido demasiado largo",
   "admin.createUser.validation.invalidEmail": "Dirección de correo electrónico no válida",
-  "admin.createUser.validation.passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+  "admin.createUser.validation.passwordMinLength": "La contraseña debe tener al menos 12 caracteres",
   "admin.createUser.validation.passwordComplexity": "La contraseña debe contener mayúsculas, minúsculas, números y caracteres especiales",
   "admin.createUser.validation.confirmPasswordRequired": "La confirmación de contraseña es obligatoria",
   "admin.createUser.validation.passwordsDontMatch": "Las contraseñas no coinciden",

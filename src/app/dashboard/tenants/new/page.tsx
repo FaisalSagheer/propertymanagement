@@ -61,6 +61,7 @@ import {
 } from "lucide-react";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { useLocalizationContext } from "@/components/providers/LocalizationProvider";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { allowAlphabetsOnly, allowNumbersOnly } from "@/lib/utils";
 
 // Create tenant schema factory function to use translations
@@ -90,7 +91,7 @@ const createTenantSchema = (t: (key: string) => string) =>
       // Password Information
       password: z
         .string()
-        .min(8, t("tenants.form.validation.passwordMinLength"))
+        .min(MIN_PASSWORD_LENGTH, t("tenants.form.validation.passwordMinLength"))
         .regex(
           /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
           t("tenants.form.validation.passwordComplexity")

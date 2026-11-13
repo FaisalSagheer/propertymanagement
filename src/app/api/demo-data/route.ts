@@ -5,6 +5,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { NextRequest } from "next/server";
 import { UserRole } from "@/types";
 import {
@@ -42,7 +43,7 @@ const installDemoDataSchema = z.object({
     .max(100)
     .default("Demo Property Management"),
   adminEmail: z.string().email().default("admin@demo.com"),
-  adminPassword: z.string().min(8).default("Demo123!"),
+  adminPassword: z.string().min(MIN_PASSWORD_LENGTH).default("DemoAdmin1234!"),
 });
 
 // ============================================================================

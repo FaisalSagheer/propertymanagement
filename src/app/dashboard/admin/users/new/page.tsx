@@ -38,6 +38,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { ArrowLeft, User, Shield, Key, Eye, EyeOff } from "lucide-react";
 import { useLocalizationContext } from "@/components/providers/LocalizationProvider";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 
 // Enhanced validation schema for user creation - will be created inside component to access t()
 const createUserSchemaFactory = (t: (key: string) => string) =>
@@ -57,7 +58,7 @@ const createUserSchemaFactory = (t: (key: string) => string) =>
         .toLowerCase(),
       password: z
         .string()
-        .min(8, t("admin.createUser.validation.passwordMinLength"))
+        .min(MIN_PASSWORD_LENGTH, t("admin.createUser.validation.passwordMinLength"))
         .regex(
           /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
           t("admin.createUser.validation.passwordComplexity")

@@ -1,3 +1,4 @@
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 // Security Settings Interface
@@ -267,7 +268,7 @@ securitySettingsSchema.statics.createDefaultSecurity = function (
     requirePasswordChange: false,
     passwordChangeInterval: 90,
     passwordRequirements: {
-      minLength: 8,
+      minLength: MIN_PASSWORD_LENGTH,
       requireUppercase: true,
       requireLowercase: true,
       requireNumbers: true,

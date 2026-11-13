@@ -17,7 +17,7 @@ import User from '../models/User';
 const DEMO_ACCOUNTS = [
   {
     email: 'admin@propertypro.com',
-    password: 'Admin123$',
+    password: 'Admin1234567$',
     firstName: 'Super',
     lastName: 'Admin',
     role: 'admin',
@@ -27,7 +27,7 @@ const DEMO_ACCOUNTS = [
   },
   {
     email: 'manager@propertypro.com',
-    password: 'Manager123$',
+    password: 'Manager1234567$',
     firstName: 'Property',
     lastName: 'Manager',
     role: 'manager',
@@ -37,7 +37,7 @@ const DEMO_ACCOUNTS = [
   },
   {
     email: 'tenant@propertypro.com',
-    password: 'Tenant123$',
+    password: 'Tenant1234567$',
     firstName: 'Demo',
     lastName: 'Tenant',
     role: 'tenant',

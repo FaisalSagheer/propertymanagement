@@ -1,3 +1,4 @@
+import { MIN_PASSWORD_LENGTH, PASSWORD_MIN_MESSAGE } from "@/lib/auth/password-policy";
 import mongoose, { Schema, Model, HydratedDocument } from "mongoose";
 import bcrypt from "bcryptjs";
 import { IUser, IUserMethods, UserRole, IEmergencyContact } from "@/types";
@@ -86,7 +87,7 @@ const UserSchema = new Schema<
     },
     password: {
       type: String,
-      minlength: [6, "Password must be at least 6 characters long"],
+      minlength: [MIN_PASSWORD_LENGTH, PASSWORD_MIN_MESSAGE],
       select: false, // Don't include password in queries by default
     },
     firstName: {

@@ -324,7 +324,7 @@
   "tenants.form.actions.requiredFields": "* Required fields",
   "tenants.form.actions.createTenant": "Create Tenant",
 
-  "tenants.form.validation.passwordMinLength": "Password must be at least 8 characters",
+  "tenants.form.validation.passwordMinLength": "Password must be at least 12 characters",
   "tenants.form.validation.passwordComplexity": "Password must contain uppercase, lowercase, number, and special character",
   "tenants.form.validation.tenantStatusInvalid": "Please select a valid tenant status",
 
@@ -416,7 +416,7 @@
   "tenants.form.validation.ninoInvalid": "Invalid Nino format",
   "tenants.form.validation.passwordRequired": "Password is required",
   "tenants.form.validation.passwordMin": "Password must be at least 8 characters",
-  "tenants.form.validation.passwordMinLength": "Password must be at least 8 characters",
+  "tenants.form.validation.passwordMinLength": "Password must be at least 12 characters",
   "tenants.form.validation.passwordFormat": "Password must contain uppercase, lowercase, number, and special character",
   "tenants.form.validation.passwordComplexity": "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
   "tenants.form.validation.confirmPasswordRequired": "Password confirmation is required",

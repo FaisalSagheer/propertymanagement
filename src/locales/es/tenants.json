@@ -322,7 +322,7 @@
   "tenants.form.actions.requiredFields": "* Campos obligatorios",
   "tenants.form.actions.createTenant": "Crear Inquilino",
 
-  "tenants.form.validation.passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+  "tenants.form.validation.passwordMinLength": "La contraseña debe tener al menos 12 caracteres",
   "tenants.form.validation.passwordComplexity": "La contraseña debe contener mayúsculas, minúsculas, número y carácter especial",
   "tenants.form.validation.tenantStatusInvalid": "Seleccione un estado de inquilino válido",
 

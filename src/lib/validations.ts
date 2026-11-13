@@ -1329,7 +1329,7 @@ export const securitySettingsSchema = z.object({
   loginAlerts: z.boolean().default(true),
   sessionTimeout: z.number().min(15).max(480).default(60),
   passwordRequirements: z.object({
-    minLength: z.number().min(6).max(32).default(8),
+    minLength: z.number().min(6).max(32).default(MIN_PASSWORD_LENGTH),
     requireUppercase: z.boolean().default(true),
     requireLowercase: z.boolean().default(true),
     requireNumbers: z.boolean().default(true),

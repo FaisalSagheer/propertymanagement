@@ -322,7 +322,7 @@
   "tenants.form.actions.requiredFields": "* Champs obligatoires",
   "tenants.form.actions.createTenant": "Créer le Locataire",
 
-  "tenants.form.validation.passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+  "tenants.form.validation.passwordMinLength": "Le mot de passe doit contenir au moins 12 caractères",
   "tenants.form.validation.passwordComplexity": "Le mot de passe doit contenir des majuscules, minuscules, un chiffre et un caractère spécial",
   "tenants.form.validation.tenantStatusInvalid": "Veuillez sélectionner un statut de locataire valide",
 

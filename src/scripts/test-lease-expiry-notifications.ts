@@ -65,7 +65,7 @@ class LeaseExpiryNotificationTester {
         lastName: "Owner",
         email: `test-owner-${Date.now()}@example.com`,
         role: "admin",
-        password: "test123456",
+        password: "test1234567890",
       });
 
       // Create test manager user
@@ -74,7 +74,7 @@ class LeaseExpiryNotificationTester {
         lastName: "Manager",
         email: `test-manager-${Date.now()}@example.com`,
         role: "manager",
-        password: "test123456",
+        password: "test1234567890",
       });
 
       // Create test tenant user
@@ -83,7 +83,7 @@ class LeaseExpiryNotificationTester {
         lastName: "Tenant",
         email: `test-tenant-${Date.now()}@example.com`,
         role: "tenant",
-        password: "test123456",
+        password: "test1234567890",
       });
 
       this.testUserId = testTenant._id as mongoose.Types.ObjectId;
