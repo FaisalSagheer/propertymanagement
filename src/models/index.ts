@@ -49,3 +49,5 @@ export { default as ManagerAccount } from "./ManagerAccount";
 export { default as ManagerPayment } from "./ManagerPayment";
 // Plan subscriptions held by users
 export { default as Subscription } from "./Subscription";
+// Stripe webhook events already received (idempotency ledger)
+export { default as StripeEvent } from "./StripeEvent";

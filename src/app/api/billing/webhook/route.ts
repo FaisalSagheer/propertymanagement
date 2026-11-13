@@ -31,6 +31,11 @@ import {
   SEVEN_DAYS_MS,
 } from "@/lib/invitation-utils";
 import { emailService } from "@/lib/email-service";
+import {
+  claimStripeEvent,
+  markStripeEventProcessed,
+  releaseStripeEvent,
+} from "@/lib/stripe-events";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +57,85 @@ function periodLabel(date: Date): string {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+/**
+ * Mirror a ManagerAccount's state onto the two other places that describe it:
+ * the user's `subscription` field (what they are entitled to) and the
+ * standalone Subscription record. The account stays the source of truth; call
+ * this after every change to it so the three never drift apart.
+ *
+ * Past-due keeps the plan while Stripe retries the card (otherwise one declined
+ * payment would instantly cut off a paying customer); cancelled, expired and
+ * still-pending accounts fall back to `free`.
+ *
+ * Best-effort: the payment itself is already recorded, so a failure here is
+ * logged, not thrown (throwing would make Stripe retry a payment we hold).
+ */
+async function syncSubscriptionState(account: any) {
+  const entitled =
+    account.status === "active" || account.status === "past_due"
+      ? account.planId
+      : "free";
+
+  if (account.managerUserId) {
+    try {
+      await User.updateOne(
+        { _id: account.managerUserId },
+        { $set: { subscription: entitled } }
+      );
+    } catch (error) {
+      console.error(
+        `[billing] failed to set user ${account.managerUserId} to "${entitled}":`,
+        error
+      );
+    }
+  }
+
+  try {
+    const set: Record<string, unknown> = {
+      planId: account.planId,
+      status: account.status,
+      billingCycle: account.billingCycle,
+      amount: account.amount,
+      unitLimit: resolvePlan(account.planId)?.unitLimit ?? null,
+      currentPeriodEnd: account.renewsAt ?? null,
+      lastPaymentAt: account.lastPaymentAt ?? null,
+      cancelAtPeriodEnd: !!account.cancelAtPeriodEnd,
+      stripeCustomerId: account.stripeCustomerId ?? null,
+      stripeSubscriptionId: account.stripeSubscriptionId ?? null,
+      stripePriceId: account.stripePriceId ?? null,
+    };
+    if (account.status === "cancelled") {
+      set.cancelledAt = account.updatedAt ?? new Date();
+    }
+
+    const filter = { managerAccountId: account._id, deletedAt: null };
+    if (account.managerUserId) {
+      // Upsert: an account created by Checkout (no prior sign-up) has no
+      // Subscription record yet.
+      await dbModel("Subscription").updateOne(
+        filter,
+        {
+          $set: set,
+          $setOnInsert: {
+            userId: account.managerUserId,
+            startedAt: account.startedAt ?? new Date(),
+            paymentMethod: "card",
+            currency: "GBP",
+          },
+        },
+        { upsert: true }
+      );
+    } else {
+      await dbModel("Subscription").updateOne(filter, { $set: set });
+    }
+  } catch (error) {
+    console.error(
+      `[billing] failed to update Subscription for account ${account._id}:`,
+      error
+    );
+  }
 }
 
 /**
@@ -218,11 +302,15 @@ async function handleCheckoutCompleted(
     // on stripeSubscriptionId makes the loser throw, the webhook returns 500,
     // and Stripe retries — by which time the check at the top matches instead.
     await unclaimed.save();
+    await syncSubscriptionState(unclaimed);
     return;
   }
 
-  await ManagerAccount.create({ ...paidFields, clientName: name || email });
-
+  const created = await ManagerAccount.create({
+    ...paidFields,
+    clientName: name || email,
+  });
+  await syncSubscriptionState(created);
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
@@ -244,47 +332,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     );
   }
 
-  // Money has arrived, so the user may now be entitled to their plan. Sign-up
-  // deliberately creates paid-plan users on the `free` subscription (see
-  // auth/register), which is what stops someone granting themselves Pro by
-  // filling in a form. Their role stays `manager` throughout.
-  //
-  // Best-effort: a failure here must not make Stripe retry a payment we have
-  // already recorded. The account is on the right plan either way, so this is
-  // recoverable by re-running the promotion.
-  if (account.managerUserId) {
-    try {
-      await User.updateOne(
-        { _id: account.managerUserId },
-        { $set: { subscription: account.planId } }
-      );
-    } catch (promotionError) {
-      console.error(
-        `[billing] failed to move user ${account.managerUserId} onto ${account.planId}:`,
-        promotionError
-      );
-    }
-  }
-
-  // Keep the standalone Subscription record in step with the payment.
-  try {
-    await dbModel("Subscription").updateOne(
-      { managerAccountId: account._id, deletedAt: null },
-      {
-        $set: {
-          status: "active",
-          lastPaymentAt: new Date(),
-          stripeSubscriptionId: subscriptionId,
-        },
-      }
-    );
-  } catch (syncError) {
-    console.error(
-      `[billing] failed to update Subscription for account ${account._id}:`,
-      syncError
-    );
-  }
-
   const receivedOn = new Date(
     (invoice.status_transitions?.paid_at ?? invoice.created) * 1000
   );
@@ -303,25 +350,55 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       stripeInvoiceId: invoice.id,
     });
   } catch (error: any) {
-    // Unique index on stripeInvoiceId: this invoice is already in the ledger,
-    // so the delivery is a retry. Not an error.
+    // Unique index on stripeInvoiceId: an earlier delivery already wrote this
+    // payment. That is NOT a reason to stop — it may have died before updating
+    // the account below — so carry on; everything after this is idempotent.
     if (error?.code !== 11000) throw error;
+  }
+
+  // A late or replayed invoice must not undo a cancellation: a customer who
+  // re-subscribes gets a new Stripe subscription (and so a new account).
+  if (account.status === "cancelled" || account.status === "expired") {
+    console.warn(
+      `[billing] invoice ${invoice.id} paid on ${account.status} account ${account._id}; payment recorded, account left as is`
+    );
     return;
   }
 
-  account.lastPaymentAt = receivedOn;
+  // Only ever move forward in time, so an older invoice delivered late cannot
+  // roll the dates back.
+  if (!account.lastPaymentAt || receivedOn > account.lastPaymentAt) {
+    account.lastPaymentAt = receivedOn;
+  }
   account.status = "active";
   const periodEnd = (invoice as any).period_end as number | undefined;
-  if (periodEnd) account.renewsAt = new Date(periodEnd * 1000);
+  if (periodEnd) {
+    const next = new Date(periodEnd * 1000);
+    if (!account.renewsAt || next > account.renewsAt) account.renewsAt = next;
+  }
   await account.save();
+  await syncSubscriptionState(account);
 }
 
-async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
+async function handleSubscriptionChanged(
+  stripe: Stripe,
+  eventSubscription: Stripe.Subscription
+) {
   const account = await ManagerAccount.findOne({
-    stripeSubscriptionId: subscription.id,
+    stripeSubscriptionId: eventSubscription.id,
     deletedAt: null,
   });
   if (!account) return;
+
+  // Events can arrive out of order, so the payload may describe an older state
+  // than Stripe now holds. Re-read the subscription and act on the current one.
+  let subscription: Stripe.Subscription;
+  try {
+    subscription = await stripe.subscriptions.retrieve(eventSubscription.id);
+  } catch (error: any) {
+    if (error?.code === "resource_missing") return;
+    throw error; // anything else: 500 so Stripe retries
+  }
 
   const priceId = subscription.items.data[0]?.price?.id;
   const mapped = priceId ? planForStripePrice(priceId) : null;
@@ -352,6 +429,11 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
     case "incomplete_expired":
       account.status = "pending";
       break;
+    default:
+      // e.g. "paused": not something we sell. Leave the status alone and say so.
+      console.warn(
+        `[billing] subscription ${subscription.id} has unhandled status "${subscription.status}"; account status unchanged`
+      );
   }
 
   account.cancelAtPeriodEnd = subscription.cancel_at_period_end ?? false;
@@ -362,6 +444,7 @@ async function handleSubscriptionChanged(subscription: Stripe.Subscription) {
   if (currentPeriodEnd) account.renewsAt = new Date(currentPeriodEnd * 1000);
 
   await account.save();
+  await syncSubscriptionState(account);
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -375,6 +458,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   account.cancelAtPeriodEnd = false;
   account.renewsAt = null;
   await account.save();
+  await syncSubscriptionState(account);
 
   // Revoke the login too: a cancelled subscription that leaves a working
   // manager account is the org giving the product away.
@@ -383,17 +467,35 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }
 }
 
-async function handleInvoiceFailed(invoice: Stripe.Invoice) {
+async function handleInvoiceFailed(stripe: Stripe, eventInvoice: Stripe.Invoice) {
   const subscriptionId =
-    typeof (invoice as any).subscription === "string"
-      ? (invoice as any).subscription
-      : (invoice as any).subscription?.id;
+    typeof (eventInvoice as any).subscription === "string"
+      ? (eventInvoice as any).subscription
+      : (eventInvoice as any).subscription?.id;
   if (!subscriptionId) return;
 
-  await ManagerAccount.findOneAndUpdate(
-    { stripeSubscriptionId: subscriptionId, deletedAt: null },
-    { status: "past_due" }
-  );
+  // A failure event can be delivered AFTER the retry succeeded. Re-read the
+  // invoice: if it has been paid since, this event is stale and must not
+  // downgrade a customer who has in fact paid.
+  if (eventInvoice.id) {
+    try {
+      const current = await stripe.invoices.retrieve(eventInvoice.id);
+      if (current.status === "paid") return;
+    } catch (error: any) {
+      if (error?.code === "resource_missing") return;
+      throw error;
+    }
+  }
+
+  const account = await ManagerAccount.findOne({
+    stripeSubscriptionId: subscriptionId,
+    deletedAt: null,
+  });
+  if (!account || account.status === "cancelled") return;
+
+  account.status = "past_due";
+  await account.save();
+  await syncSubscriptionState(account);
 }
 
 export async function POST(request: NextRequest) {
@@ -426,32 +528,57 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutCompleted(
-          stripe,
-          event.data.object as Stripe.Checkout.Session
-        );
-        break;
-      case "invoice.paid":
-        await handleInvoicePaid(event.data.object as Stripe.Invoice);
-        break;
-      case "invoice.payment_failed":
-        await handleInvoiceFailed(event.data.object as Stripe.Invoice);
-        break;
-      case "customer.subscription.updated":
-        await handleSubscriptionChanged(
-          event.data.object as Stripe.Subscription
-        );
-        break;
-      case "customer.subscription.deleted":
-        await handleSubscriptionDeleted(
-          event.data.object as Stripe.Subscription
-        );
-        break;
-      default:
-        // Unhandled types are acknowledged, not retried forever.
-        break;
+    // Claim the event first. Stripe delivers at-least-once, so the same event
+    // id can arrive twice, even at the same moment.
+    const claim = await claimStripeEvent(event, "billing");
+    if (claim === "duplicate") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    if (claim === "in_progress") {
+      // Another delivery is handling it right now. A non-2xx makes Stripe retry.
+      return NextResponse.json(
+        { error: "Event is already being processed" },
+        { status: 409 }
+      );
+    }
+
+    try {
+      switch (event.type) {
+        case "checkout.session.completed":
+          await handleCheckoutCompleted(
+            stripe,
+            event.data.object as Stripe.Checkout.Session
+          );
+          break;
+        case "invoice.paid":
+          await handleInvoicePaid(event.data.object as Stripe.Invoice);
+          break;
+        case "invoice.payment_failed":
+          await handleInvoiceFailed(
+            stripe,
+            event.data.object as Stripe.Invoice
+          );
+          break;
+        case "customer.subscription.updated":
+          await handleSubscriptionChanged(
+            stripe,
+            event.data.object as Stripe.Subscription
+          );
+          break;
+        case "customer.subscription.deleted":
+          await handleSubscriptionDeleted(
+            event.data.object as Stripe.Subscription
+          );
+          break;
+        default:
+          // Unhandled types are acknowledged, not retried forever.
+          break;
+      }
+      await markStripeEventProcessed(event.id);
+    } catch (handlerError) {
+      // Forget the claim so Stripe's retry is processed rather than skipped.
+      await releaseStripeEvent(event.id);
+      throw handlerError;
     }
 
     return NextResponse.json({ received: true });

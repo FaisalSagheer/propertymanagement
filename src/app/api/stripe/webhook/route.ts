@@ -6,6 +6,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { connectToDatabase } from "@/lib/mongodb";
+import {
+  claimStripeEvent,
+  markStripeEventProcessed,
+  releaseStripeEvent,
+} from "@/lib/stripe-events";
 import { ObjectId } from "mongodb";
 import { triggerPaymentUpdate } from "../../payments/stream/route";
 
@@ -36,6 +41,20 @@ export async function POST(request: NextRequest) {
     }
 
 
+    // Claim the event so a redelivery (Stripe is at-least-once) is skipped.
+    await connectToDatabase();
+    const claim = await claimStripeEvent(event, "payments");
+    if (claim === "duplicate") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    if (claim === "in_progress") {
+      return NextResponse.json(
+        { error: "Event is already being processed" },
+        { status: 409 }
+      );
+    }
+
+    try {
     // Handle the event
     switch (event.type) {
       case "payment_intent.succeeded":
@@ -84,6 +103,12 @@ export async function POST(request: NextRequest) {
 
       default:
 
+    }
+      await markStripeEventProcessed(event.id);
+    } catch (handlerError) {
+      // Forget the claim so Stripe's retry is processed rather than skipped.
+      await releaseStripeEvent(event.id);
+      throw handlerError;
     }
 
     return NextResponse.json({ received: true });
