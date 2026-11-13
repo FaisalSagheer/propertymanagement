@@ -3,6 +3,7 @@
  * Creates sample invoices for testing the tenant invoice history feature
  */
 
+import { demoRoute } from "@/lib/auth/route-guards";
 import { NextRequest } from "next/server";
 import { Invoice, Property, User, Lease } from "@/models";
 import { UserRole, InvoiceStatus, InvoiceType } from "@/types";
@@ -13,7 +14,7 @@ import {
   withRoleAndDB,
 } from "@/lib/api-utils";
 
-export const POST = withRoleAndDB([UserRole.ADMIN])(
+export const POST = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       // First, let's check if we have any properties, tenants, and leases
@@ -162,10 +163,10 @@ export const POST = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error, "Failed to create sample invoices");
     }
   }
-);
+));
 
 // GET endpoint to check existing data
-export const GET = withRoleAndDB([UserRole.ADMIN])(
+export const GET = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       const properties = await Property.find().select("name address").limit(5);
@@ -218,10 +219,10 @@ export const GET = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error, "Failed to retrieve sample data");
     }
   }
-);
+));
 
 // DELETE endpoint to clean up test data
-export const DELETE = withRoleAndDB([UserRole.ADMIN])(
+export const DELETE = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       const result = await Invoice.deleteMany({
@@ -236,4 +237,4 @@ export const DELETE = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error, "Failed to delete test invoices");
     }
   }
-);
+));

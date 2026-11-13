@@ -5,6 +5,7 @@
 
 export const dynamic = "force-dynamic";
 
+import { demoRoute } from "@/lib/auth/route-guards";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { NextRequest } from "next/server";
 import { UserRole } from "@/types";
@@ -49,7 +50,7 @@ const installDemoDataSchema = z.object({
 // ============================================================================
 // POST /api/demo-data - Install demo data
 // ============================================================================
-export const POST = withRoleAndDB([UserRole.ADMIN])(
+export const POST = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       const { success, data: body, error } = await parseRequestBody(request);
@@ -92,14 +93,24 @@ export const POST = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error);
     }
   }
-);
+));
 
 // ============================================================================
 // DELETE /api/demo-data - Clear demo data
 // ============================================================================
-export const DELETE = withRoleAndDB([UserRole.ADMIN])(
+export const DELETE = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
+      // Wipes users, properties, leases, payments and more, so it must be
+      // asked for explicitly: send {"confirm": "DELETE ALL DATA"}.
+      const body = await request.json().catch(() => ({}));
+      if (body?.confirm !== "DELETE ALL DATA") {
+        return createErrorResponse(
+          'This deletes ALL data. Send {"confirm":"DELETE ALL DATA"} to proceed.',
+          400
+        );
+      }
+
       const result = await demoDataService.clearDemoData();
 
       if (result.success) {
@@ -114,12 +125,12 @@ export const DELETE = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error);
     }
   }
-);
+));
 
 // ============================================================================
 // GET /api/demo-data - Check demo data status
 // ============================================================================
-export const GET = withRoleAndDB([UserRole.ADMIN])(
+export const GET = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       // Import models dynamically to check data
@@ -214,7 +225,7 @@ export const GET = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error);
     }
   }
-);
+));
 
 // ============================================================================
 // Helper functions for demo data management

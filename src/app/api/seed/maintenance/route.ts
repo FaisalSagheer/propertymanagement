@@ -3,6 +3,7 @@
  * Creates sample maintenance requests for testing
  */
 
+import { demoRoute } from "@/lib/auth/route-guards";
 import { NextRequest } from "next/server";
 import { MaintenanceRequest, Property, Tenant, User } from "@/models";
 import { UserRole, MaintenancePriority, MaintenanceStatus } from "@/types";
@@ -13,7 +14,7 @@ import {
   withRoleAndDB,
 } from "@/lib/api-utils";
 
-export const POST = withRoleAndDB([UserRole.ADMIN])(
+export const POST = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       // First, let's check if we have any properties and tenant users
@@ -89,10 +90,10 @@ export const POST = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error);
     }
   }
-);
+));
 
 // GET endpoint to check existing data
-export const GET = withRoleAndDB([UserRole.ADMIN])(
+export const GET = demoRoute(withRoleAndDB([UserRole.ADMIN])(
   async (user, request: NextRequest) => {
     try {
       const properties = await Property.find().select("name address").limit(5);
@@ -131,4 +132,4 @@ export const GET = withRoleAndDB([UserRole.ADMIN])(
       return handleApiError(error);
     }
   }
-);
+));
