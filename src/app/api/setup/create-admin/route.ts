@@ -20,6 +20,7 @@ import { createSuccessResponse, createErrorResponse } from "@/lib/api-utils";
 import connectDB from "@/lib/mongodb";
 import { checkSetupToken } from "@/lib/auth/route-guards";
 import { validatePasswordPolicy } from "@/lib/auth/password-policy";
+import { checkPasswordBreached, BREACHED_PASSWORD_MESSAGE } from "@/lib/auth/password-breach";
 
 export async function POST(request: NextRequest) {
   // Authorise before touching the database.
@@ -53,6 +54,10 @@ export async function POST(request: NextRequest) {
     const passwordError = validatePasswordPolicy(password);
     if (passwordError) {
       return createErrorResponse(passwordError, 400);
+    }
+    const breach = await checkPasswordBreached(password);
+    if (breach.status === "breached") {
+      return createErrorResponse(BREACHED_PASSWORD_MESSAGE, 400);
     }
 
     // Check if user with email already exists

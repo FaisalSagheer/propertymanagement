@@ -16,6 +16,7 @@ import {
   withDatabase,
 } from "@/lib/api-utils";
 import { validatePasswordPolicy, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
+import { checkPasswordBreached, BREACHED_PASSWORD_MESSAGE } from "@/lib/auth/password-breach";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/utils";
 
 // ============================================================================
@@ -72,6 +73,10 @@ export const POST = withDatabase(async (request: NextRequest) => {
     const passwordError = validatePasswordPolicy(password);
     if (passwordError) {
       return createErrorResponse(passwordError, 400);
+    }
+    const breach = await checkPasswordBreached(password);
+    if (breach.status === "breached") {
+      return createErrorResponse(BREACHED_PASSWORD_MESSAGE, 400);
     }
 
     // A self-registration carries a plan id. Every plan is sold as a Manager

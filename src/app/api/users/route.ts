@@ -15,6 +15,8 @@ import {
   isValidObjectId,
 } from "@/lib/api-utils";
 import connectDB from "@/lib/mongodb";
+import { checkPasswordBreached, BREACHED_PASSWORD_MESSAGE } from "@/lib/auth/password-breach";
+import { validatePasswordPolicy } from "@/lib/auth/password-policy";
 import { auditService } from "@/lib/audit-service";
 import { AuditCategory, AuditAction, AuditSeverity } from "@/models/AuditLog";
 
@@ -188,6 +190,15 @@ export const POST = async (request: NextRequest) => {
     // Basic validation
     if (!body.email || !body.password || !body.firstName || !body.lastName) {
       return createErrorResponse("Missing required fields", 400);
+    }
+
+    const passwordError = validatePasswordPolicy(body.password);
+    if (passwordError) {
+      return createErrorResponse(passwordError, 400);
+    }
+    const breach = await checkPasswordBreached(body.password);
+    if (breach.status === "breached") {
+      return createErrorResponse(BREACHED_PASSWORD_MESSAGE, 400);
     }
 
     // Validate role (system role or existing custom role)

@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest } from "next/server";
 import connectDB from "@/lib/mongodb";
+import { checkPasswordBreached, BREACHED_PASSWORD_MESSAGE } from "@/lib/auth/password-breach";
 import {
   MIN_PASSWORD_LENGTH,
   MAX_PASSWORD_LENGTH,
@@ -70,6 +71,11 @@ export async function POST(request: NextRequest) {
     }
 
     const resetToken = tokenResult.invitation;
+
+    const breach = await checkPasswordBreached(password);
+    if (breach.status === "breached") {
+      return createErrorResponse(BREACHED_PASSWORD_MESSAGE, 400);
+    }
 
     // Find the user
     const user = await User.findById(resetToken.userId);
