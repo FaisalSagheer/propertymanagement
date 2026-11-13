@@ -35,7 +35,7 @@ Other one-off scripts in `src/scripts/` and `scripts/` are run directly with `np
 
 ### Roles and permissions (`src/lib/auth/`)
 - Three built-in roles in `src/types/index.ts`: `admin`, `manager`, `tenant`. Admins can also create **custom roles** (`Role` model), each with `inheritsFrom` a built-in role and a `permissions` array.
-- `resolve-role.ts` maps a custom role to its effective built-in role, so guards only ever compare against the enum. Built-in roles resolve with `permissions: []`.
+- `resolve-role.ts` maps a custom role to its effective built-in role, so guards only ever compare against the enum. Built-in roles resolve with `permissions: []`. The session's `role` is ALREADY the effective built-in role; the name actually stored on the user is `session.user.assignedRole`. Always resolve from `assignedRole ?? role` (as `withRoleAndDB` and `requireRole` do), or a custom role silently loses its permissions and its `property_view_all` scope lift.
 - `require-permission.ts` / `permissions.ts`: `requirePermission(user, "x_action")` gives finer control *within* a role-gated route. Admin is always allowed, built-in manager is allowed, and custom roles must hold the permission or its `*_management` parent.
 - `property-scope.ts`: non-admins only see properties they own (`ownerId`, set to the creator) or are assigned to (`managerId`/`assignedAgentId`), unless they hold `property_view_all`. Apply `applyPropertyScope` / `canViewAllProperties` to any property-related query.
 

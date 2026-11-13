@@ -293,7 +293,15 @@ export function withRoleAndDB(roles: UserRole | UserRole[]) {
         // resolved to the base role it inherits from. Previously this was a
         // bare `as UserRole` cast, so a custom role matched nothing in
         // allowedRoles and was refused by every guarded route.
-        const resolved = await resolveUserRole(session.user.role as string);
+        //
+        // Resolve from `assignedRole` (the name actually stored on the user),
+        // NOT `role`: the session callback has already replaced `role` with the
+        // built-in role a custom role inherits from, so resolving that again
+        // would see a plain built-in role and silently drop the custom role's
+        // permissions (and its property_view_all scope lift).
+        const resolved = await resolveUserRole(
+          (session.user.assignedRole ?? session.user.role) as string
+        );
 
         const user: AuthenticatedUser = {
           id: session.user.id,

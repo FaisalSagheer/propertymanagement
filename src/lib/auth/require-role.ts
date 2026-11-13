@@ -41,7 +41,13 @@ export async function requireRole(
   // The session already carries the resolved role and permissions (see the
   // session callback in lib/auth.ts), but resolve again so this helper is
   // correct even if called with a session minted before that change.
-  const resolved = await resolveUserRole(session.user.role as string);
+  //
+  // Resolve from `assignedRole`, not `role`: the session's `role` is already
+  // the built-in role a custom role inherits from, and resolving that again
+  // would drop the custom role's permissions.
+  const resolved = await resolveUserRole(
+    (session.user.assignedRole ?? session.user.role) as string
+  );
 
   const user: AuthenticatedUser = {
     id: session.user.id,
