@@ -799,7 +799,7 @@ The application provides a comprehensive REST API. Key endpoints:
 - `GET /api/payments` - List payments
 - `POST /api/payments` - Process payment
 - `GET /api/payments/history` - Payment history
-- `POST /api/payments/webhook` - Stripe webhook endpoint
+- `POST /api/stripe/webhook` - Stripe webhook endpoint for tenant rent payments (`/api/payments/webhook` is a legacy alias of it)
 
 ### Messages
 

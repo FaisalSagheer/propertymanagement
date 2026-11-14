@@ -1,60 +1,22 @@
 /**
- * PropertyPro - Stripe Webhook Handler
- * Handles Stripe webhook events for payment processing
+ * PropertyPro - Stripe webhook (legacy path)
+ *
+ * DEPRECATED ALIAS of POST /api/stripe/webhook, which is the endpoint the
+ * README tells you to register in Stripe.
+ *
+ * This path used to carry its own, second implementation. It could never run:
+ * it called `headers().get(...)` without awaiting `headers()` (a Promise in
+ * Next 15+), so every request failed with a 400. Two webhooks for the same
+ * events would also be a trap if both were ever fixed, because each would
+ * process the same Stripe event with different code.
+ *
+ * It now re-exports the canonical handler, so there is exactly one
+ * implementation (signature check, once-only event claiming, handlers). A Stripe
+ * endpoint still pointed here keeps working, with the same signing secret
+ * (STRIPE_WEBHOOK_SECRET) as the canonical route. Point new endpoints at
+ * /api/stripe/webhook.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { constructWebhookEvent, handleWebhookEvent } from "@/lib/stripe";
-import connectDB from "@/lib/mongodb";
+export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
-  try {
-    // Connect to database
-    await connectDB();
-
-    // Get the raw body
-    const body = await request.text();
-
-    // Get the Stripe signature from headers
-    const headersList = headers();
-    const signature = headersList.get("stripe-signature");
-
-    if (!signature) {
-      console.error("Missing Stripe signature");
-      return NextResponse.json(
-        { error: "Missing Stripe signature" },
-        { status: 400 }
-      );
-    }
-
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.error("Missing Stripe webhook secret");
-      return NextResponse.json(
-        { error: "Webhook secret not configured" },
-        { status: 500 }
-      );
-    }
-
-    // Construct the Stripe event
-    const event = constructWebhookEvent(body, signature, webhookSecret);
-
-
-    // Handle the event
-    await handleWebhookEvent(event);
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Webhook error:", error);
-
-    if (error instanceof Error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    return NextResponse.json(
-      { error: "Webhook handler failed" },
-      { status: 500 }
-    );
-  }
-}
+export { POST } from "../../stripe/webhook/route";
