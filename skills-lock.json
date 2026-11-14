@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "skills": {
+    "chrome-devtools": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/chrome-devtools/SKILL.md",
+      "computedHash": "5487469a94b2003f826cddc0f7c5c021541b194a3a8ca0e010c34845da7641ac"
+    }
+  }
+}
