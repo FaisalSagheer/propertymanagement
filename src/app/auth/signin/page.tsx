@@ -86,7 +86,11 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError("Invalid email or password");
+        setError(
+          result.code === "too_many_attempts"
+            ? "Too many sign-in attempts. Please wait about 15 minutes and try again, or reset your password."
+            : "Invalid email or password"
+        );
         setIsLoading(false);
       } else if (result?.ok) {
         setTimeout(() => {

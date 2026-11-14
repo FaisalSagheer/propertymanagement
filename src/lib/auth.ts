@@ -1,4 +1,4 @@
-import NextAuth, { type NextAuthConfig } from "next-auth";
+import NextAuth, { CredentialsSignin, type NextAuthConfig } from "next-auth";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
@@ -8,6 +8,12 @@ import connectDB from "./mongodb";
 import User, { UserDocument } from "@/models/User";
 import { UserRole } from "@/types";
 import { resolveUserRole } from "@/lib/auth/resolve-role";
+import {
+  checkLoginAllowed,
+  clientIpFromHeaders,
+  recordLoginFailure,
+  recordLoginSuccess,
+} from "@/lib/auth/login-throttle";
 import type { Provider } from "next-auth/providers";
 
 // MongoDB client for NextAuth adapter
@@ -25,6 +31,15 @@ const clientPromise: Promise<MongoClient> = (() => {
   }
   return global._mongoClientPromise;
 })();
+
+/**
+ * Thrown when a sign-in is refused because of too many recent failures. Extends
+ * CredentialsSignin so Auth.js treats it as a rejected sign-in (not a server
+ * fault); the `code` reaches the client so the form can explain why.
+ */
+class TooManyAttempts extends CredentialsSignin {
+  code = "too_many_attempts";
+}
 
 // Create providers array conditionally
 const providers: Provider[] = [];
@@ -96,12 +111,22 @@ providers.push(
         return null;
       }
 
-      try {
-        await connectDB();
+      const email = (credentials.email as string).toLowerCase().trim();
+      const ip = clientIpFromHeaders(request?.headers);
 
+      // Refuse BEFORE looking at the password: a locked-out sign-in must fail
+      // even if the password is right, or the lock would not slow guessing.
+      // Same answer whether or not the account exists.
+      await connectDB();
+      const gate = await checkLoginAllowed(email, ip);
+      if (!gate.allowed) {
+        throw new TooManyAttempts();
+      }
+
+      try {
         // Find user with password field included
         const user = (await User.findOne({
-          email: (credentials.email as string).toLowerCase(),
+          email,
         }).select("+password")) as UserDocument | null;
 
         // Return null, never throw, on a failed credential check. Auth.js v5
@@ -111,10 +136,12 @@ providers.push(
         // deployment, both on screen and in the logs. Returning null produces
         // the correct CredentialsSignin result.
         if (!user) {
+          await recordLoginFailure(email, ip);
           return null;
         }
 
         if (!user?.isActive) {
+          await recordLoginFailure(email, ip);
           return null;
         }
 
@@ -124,8 +151,11 @@ providers.push(
         );
 
         if (!isPasswordValid) {
+          await recordLoginFailure(email, ip);
           return null;
         }
+
+        await recordLoginSuccess(email, ip);
 
         // Update last login
         await user.updateLastLogin();

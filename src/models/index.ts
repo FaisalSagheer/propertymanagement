@@ -51,3 +51,5 @@ export { default as ManagerPayment } from "./ManagerPayment";
 export { default as Subscription } from "./Subscription";
 // Stripe webhook events already received (idempotency ledger)
 export { default as StripeEvent } from "./StripeEvent";
+// Failed-login counters (login throttling)
+export { default as LoginAttempt } from "./LoginAttempt";
