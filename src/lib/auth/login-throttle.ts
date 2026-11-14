@@ -36,8 +36,8 @@ export interface AttemptRow {
 /** Persistence, injectable so the logic can be tested without a database. */
 export interface AttemptStore {
   get(key: string): Promise<AttemptRow | null>;
-  /** Count one failure in the current window (starting a new window if needed). */
-  increment(key: string, now: number): Promise<AttemptRow>;
+  /** Count one event in the current window (starting a new window if needed). */
+  increment(key: string, now: number, windowMs?: number): Promise<AttemptRow>;
   lock(key: string, until: Date): Promise<void>;
   clear(key: string): Promise<void>;
 }
@@ -47,7 +47,7 @@ export const mongoStore: AttemptStore = {
     return (await LoginAttempt.findOne({ key }).lean()) as AttemptRow | null;
   },
 
-  async increment(key, now) {
+  async increment(key, now, windowMs = WINDOW_MS) {
     const bump = () =>
       LoginAttempt.findOneAndUpdate(
         { key, windowEndsAt: { $gt: new Date(now) } },
@@ -60,7 +60,7 @@ export const mongoStore: AttemptStore = {
 
     // No live window: start one. If another request created it in between,
     // the unique index rejects the upsert and we count into theirs instead.
-    const windowEndsAt = new Date(now + WINDOW_MS);
+    const windowEndsAt = new Date(now + windowMs);
     try {
       return (await LoginAttempt.findOneAndUpdate(
         { key },

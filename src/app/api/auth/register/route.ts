@@ -17,6 +17,13 @@ import {
 } from "@/lib/api-utils";
 import { validatePasswordPolicy, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 import { checkPasswordBreached, BREACHED_PASSWORD_MESSAGE } from "@/lib/auth/password-breach";
+import { clientIpFromHeaders } from "@/lib/auth/login-throttle";
+import {
+  consumeRateLimits,
+  emailFromBody,
+  registerRules,
+  tooManyRequests,
+} from "@/lib/auth/request-limit";
 import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/utils";
 
 // ============================================================================
@@ -29,6 +36,15 @@ export const POST = withDatabase(async (request: NextRequest) => {
     if (!success) {
       console.error("Failed to parse request body:", error);
       return createErrorResponse(error!, 400);
+    }
+
+    // Cap sign-ups per client and per address BEFORE doing any work, counting
+    // invalid attempts too (junk requests are the cheap way to spam this).
+    const limit = await consumeRateLimits(
+      registerRules(emailFromBody(body), clientIpFromHeaders(request.headers))
+    );
+    if (!limit.allowed) {
+      return tooManyRequests(limit.retryAfterSec);
     }
 
     const {

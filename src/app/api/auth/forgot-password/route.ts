@@ -18,6 +18,13 @@ import {
   createPasswordResetToken,
   sendPasswordResetEmail,
 } from "@/lib/invitation-utils";
+import { clientIpFromHeaders } from "@/lib/auth/login-throttle";
+import {
+  consumeRateLimits,
+  emailFromBody,
+  forgotPasswordRules,
+  tooManyRequests,
+} from "@/lib/auth/request-limit";
 import { z } from "zod";
 
 // Forgot password validation schema
@@ -43,6 +50,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request data
+    // Each request can send a real email, so cap them per address and per
+    // client BEFORE doing any work. Applies to any email, real or not, so it
+    // reveals nothing about which accounts exist.
+    const limit = await consumeRateLimits(
+      forgotPasswordRules(emailFromBody(body), clientIpFromHeaders(request.headers))
+    );
+    if (!limit.allowed) {
+      return tooManyRequests(limit.retryAfterSec);
+    }
+
     const validation = forgotPasswordSchema.safeParse(body);
     if (!validation.success) {
       const errors = validation.error.errors.map((err) => err.message);
